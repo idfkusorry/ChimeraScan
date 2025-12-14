@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Главная - ChimeraScan</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--color-accent);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .app-header {
+    padding: 10px 20px; 
+}
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+        
+        .header-logo-img {
+            height: 80px; 
+            filter: drop-shadow(0 0 10px var(--color-accent-glow));
+        }
+        
+        .header-logo-text {
+            font-size: 1.4rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, var(--color-accent), #9B5DE5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .cta-button {
+            padding: 20px 50px;
+            font-size: 1.2rem;
+            margin: 8px 0;
+        }
+        
+        .features-container {
+            margin-top: var(--spacing-lg);
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--spacing-md);
+            margin-top: var(--spacing-md);
+        }
+        
+        .feature-card {
+            text-align: center;
+            padding: var(--spacing-md);
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: var(--border-radius-lg);
+            border: 1px solid rgba(124, 77, 255, 0.15);
+            transition: all var(--transition-normal);
+            backdrop-filter: blur(10px);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(124, 77, 255, 0.4);
+            background: rgba(255, 255, 255, 0.05);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .feature-icon {
+            font-size: 1.8rem;
+            color: var(--color-accent);
+            margin-bottom: var(--spacing-sm);
+            background: rgba(124, 77, 255, 0.1);
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .dashboard-content {
+            text-align: center;
+            padding: var(--spacing-md) var(--spacing-md) var(--spacing-lg);
+        }
+        
+        @media (max-width: 1024px) {
+            .features-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .cta-button {
+                padding: 16px 30px;
+                font-size: 1.1rem;
+                margin: var(--spacing-md) 0 var(--spacing-sm) 0;
+            }
+            
+            .quick-actions {
+                grid-template-columns: 1fr;
+                margin-top: var(--spacing-lg) !important;
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: var(--spacing-sm);
+                margin-top: var(--spacing-sm);
+            }
+            
+            .header-logo-text {
+                font-size: 1.2rem;
+            }
+            
+            .header-logo-img {
+                height: 32px; 
+            }
+            
+            .dashboard-content {
+                padding: var(--spacing-sm) var(--spacing-sm) var(--spacing-md);
+            }
+            
+            .feature-card {
+                padding: var(--spacing-sm);
+            }
+            
+            .feature-icon {
+                width: 50px;
+                height: 50px;
+                font-size: 1.5rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .feature-card h4 {
+                font-size: 1rem;
+            }
+            
+            .feature-card p {
+                font-size: 0.85rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="ascii-matrix"></div>
+    
+    <header class="app-header">
+        <a href="/" class="header-logo">
+            <img src="/static/images/logo.png" alt="ChimeraScan" class="header-logo-img">
+            <span class="header-logo-text">ChimeraScan</span>
+        </a>
+        
+        <div class="user-info">
+            <div class="user-avatar" id="userAvatar"></div>
+            <span class="username" id="username"></span>
+            <a href="/logout" class="btn btn-icon btn-secondary" title="Выйти">
+                <i class="fas fa-sign-out-alt"></i>
+            </a>
+        </div>
+    </header>
+    
+    <main class="dashboard-content">
+        <h1 style="color: var(--color-accent); margin-bottom: var(--spacing-sm); font-size: 2.2rem; margin-top: 0;">
+            ChimeraScan: DAST-сканер для веб-приложений
+        </h1>
+        <p style="color: var(--color-text-secondary); max-width: 700px; margin: 0 auto var(--spacing-sm); font-size: 1.1rem; line-height: 1.6;">
+            Используйте современный инструмент для автоматического поиска уязвимостей, анализа безопасности и защиты ваших веб-приложений от угроз
+        </p>
+        
+        <div class="cta-section">
+            <button class="btn btn-primary cta-button" onclick="location.href='/scan'">
+                <i class="fas fa-play-circle"></i>
+                Запустить сканирование
+            </button>
+        </div>
+        
+        <div class="quick-actions" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--spacing-md); margin-top: var(--spacing-md);">
+            <div class="card card-clickable" onclick="location.href='/projects'">
+                <div style="font-size: 2.5rem; color: var(--color-accent); margin-bottom: var(--spacing-sm);">
+                    <i class="fas fa-folder"></i>
+                </div>
+                <h3>Архив проектов</h3>
+                <p style="color: var(--color-text-secondary); line-height: 1.5;">
+                    Создавайте и управляйте проектами, организуйте сканирования по категориям и отслеживайте результаты
+                </p>
+            </div>
+            
+            <div class="card card-clickable" onclick="location.href='/scans'">
+                <div style="font-size: 2.5rem; color: var(--color-accent); margin-bottom: var(--spacing-sm);">
+                    <i class="fas fa-search"></i>
+                </div>
+                <h3>Архив сканирований</h3>
+                <p style="color: var(--color-text-secondary); line-height: 1.5;">
+                    Просматривайте историю всех проведенных сканирований, анализируйте отчеты и управляйте результатами проверок
+                </p>
+            </div>
+        </div>
+        
+        <div class="features-container">
+            <h3 style="color: var(--color-accent); margin-bottom: var(--spacing-sm); text-align: center; font-size: 1.5rem; margin-top: var(--spacing-lg);">
+                <i class="fas fa-star"></i> Ключевые возможности
+            </h3>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <h4 style="color: var(--color-text-primary); margin-bottom: var(--spacing-sm);">ИИ анализ</h4>
+                    <p style="color: var(--color-text-secondary); font-size: 0.9rem; line-height: 1.5; flex-grow: 1;">
+                        Генерация рекомендаций по устранению уязвимостей с помощью нейросетей
+                    </p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-file-export"></i>
+                    </div>
+                    <h4 style="color: var(--color-text-primary); margin-bottom: var(--spacing-sm);">Мультиформатные отчеты</h4>
+                    <p style="color: var(--color-text-secondary); font-size: 0.9rem; line-height: 1.5; flex-grow: 1;">
+                        Экспорт результатов в различных форматах: JSON, PDF, HTML
+                    </p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-project-diagram"></i>
+                    </div>
+                    <h4 style="color: var(--color-text-primary); margin-bottom: var(--spacing-sm);">Управление проектами</h4>
+                    <p style="color: var(--color-text-secondary); font-size: 0.9rem; line-height: 1.5; flex-grow: 1;">
+                        Организация и группировка сканирований по проектам
+                    </p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-desktop"></i>
+                    </div>
+                    <h4 style="color: var(--color-text-primary); margin-bottom: var(--spacing-sm);">Современный веб-интерфейс</h4>
+                    <p style="color: var(--color-text-secondary); font-size: 0.9rem; line-height: 1.5; flex-grow: 1;">
+                        Интерфейс дает возможность интуитивной работы
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+<footer style="
+    margin-top: auto; 
+    padding: var(--spacing-lg) var(--spacing-md);
+    text-align: center;
+    color: var(--color-text-muted);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+">
+    <div style="max-width: 800px; margin: 0 auto;">
+        <p style="margin-bottom: 14px; opacity: 0.9;">
+            ChimeraScan — инструмент для тестирования безопасности веб-приложений
+        </p>
+        <p style="
+            margin-bottom: 18px;
+            font-size: 0.9rem;
+            opacity: 0.7;
+            font-style: italic;
+        ">
+            Данный инструмент предназначен исключительно для тестирования веб-приложений, 
+            на которые у вас есть явное письменное разрешение владельца. 
+            Использование в противоправных целях запрещено и преследуется по закону.<br>
+            Будьте этичны. Защищайте, а не атакуйте.
+        </p>
+        <div style="
+            color: var(--color-text-muted);
+            opacity: 0.6;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        ">
+            © 2025 ChimeraScan
+        </div>
+    </div>
+</footer>
+
+
+    </main>
+    
+    <script src="/static/js/main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const userAvatar = document.getElementById('userAvatar');
+            const username = document.getElementById('username');
+            
+            const usernameFromCookie = getCookie('username');
+            
+            if (usernameFromCookie) {
+                username.textContent = usernameFromCookie;
+                userAvatar.textContent = usernameFromCookie.charAt(0).toUpperCase();
+            }
+            
+            if (typeof window.userData !== 'undefined') {
+                if (window.userData.avatar) {
+                    userAvatar.style.backgroundImage = `url(${window.userData.avatar})`;
+                    userAvatar.style.backgroundSize = 'cover';
+                    userAvatar.textContent = '';
+                }
+                if (window.userData.username) {
+                    username.textContent = window.userData.username;
+                }
+            }
+        });
+        
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return null;
+        }
+    </script>
+</body>
+</html>

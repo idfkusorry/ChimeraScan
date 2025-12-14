@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Запуск сканирования - ChimeraScan</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .custom-select-wrapper {
+            position: relative;
+            width: 100%;
+        }
+        
+        .custom-select {
+            width: 100%;
+            padding: 14px 45px 14px 18px;
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 2px solid rgba(124, 77, 255, 0.3);
+            border-radius: var(--border-radius-md);
+            color: var(--color-text-primary) !important;
+            font-family: inherit;
+            font-size: 1rem;
+            transition: all var(--transition-normal);
+            appearance: none;
+            cursor: pointer;
+            outline: none;
+        }
+        
+        .custom-select:hover {
+            border-color: rgba(124, 77, 255, 0.5);
+            background: rgba(255, 255, 255, 0.07) !important;
+        }
+        
+        .custom-select:focus {
+            border-color: var(--color-accent);
+            box-shadow: 0 0 0 3px rgba(124, 77, 255, 0.3);
+            background: rgba(255, 255, 255, 0.08) !important;
+        }
+        
+        .custom-select-arrow {
+            position: absolute;
+            right: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            color: var(--color-accent);
+            font-size: 0.9rem;
+        }
+        
+        .custom-select option {
+            background-color: rgba(30, 30, 50, 0.95) !important;
+            color: var(--color-text-primary) !important;
+            padding: 12px !important;
+            border: none !important;
+        }
+        
+        .custom-select option:hover {
+            background-color: rgba(124, 77, 255, 0.2) !important;
+        }
+        
+        .custom-select option:checked {
+            background-color: rgba(124, 77, 255, 0.3) !important;
+            color: white !important;
+            font-weight: 600;
+        }
+        
+        .custom-select {
+            text-shadow: 0 0 0 var(--color-text-primary);
+        }
+        
+        .custom-select::-ms-expand {
+            display: none;
+        }
+        
+        .pulsing-sphere {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto var(--spacing-lg);
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--color-accent), var(--color-accent-dark));
+            position: relative;
+            animation: pulseSphere 2s ease-in-out infinite;
+            box-shadow: 0 0 40px rgba(124, 77, 255, 0.4);
+        }
+        
+        .pulsing-sphere.stopped {
+            animation: none;
+            opacity: 0.5;
+            box-shadow: 0 0 20px rgba(124, 77, 255, 0.2);
+        }
+        
+        .pulsing-sphere::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            border-radius: 50%;
+            background: radial-gradient(circle, transparent 30%, rgba(124, 77, 255, 0.2) 70%);
+            animation: pulseGlow 2s ease-in-out infinite;
+            z-index: -1;
+        }
+        
+        .pulsing-sphere.stopped::before {
+            animation: none;
+            opacity: 0.3;
+        }
+        
+        @keyframes pulseSphere {
+            0%, 100% {
+                transform: scale(0.9);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+        }
+        
+        @keyframes pulseGlow {
+            0%, 100% {
+                opacity: 0.5;
+                transform: scale(0.95);
+            }
+            50% {
+                opacity: 0.8;
+                transform: scale(1.05);
+            }
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .visible {
+            display: block !important;
+        }
+        
+        .scanning-section {
+            text-align: center;
+            padding: var(--spacing-xl);
+        }
+        
+        .cancelled-section {
+            text-align: center;
+            padding: var(--spacing-xl);
+        }
+        
+        .new-scan-btn {
+            margin-top: var(--spacing-lg);
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--color-accent);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="ascii-matrix"></div>
+    
+    <header class="app-header">
+        <a href="/dashboard" class="back-btn">
+            <i class="fas fa-arrow-left"></i>
+            Назад
+        </a>
+        
+        <div class="user-info">
+            <div class="user-avatar" id="userAvatar"></div>
+            <span class="username" id="username"></span>
+            <a href="/logout" class="btn btn-icon btn-secondary" title="Выйти">
+                <i class="fas fa-sign-out-alt"></i>
+            </a>
+        </div>
+    </header>
+    
+    <main class="container">
+        <div class="page-header">
+            <div class="page-title">
+                <h1 style="color: var(--color-accent); margin-top: var(--spacing-md);">Запуск сканирования</h1>
+                <p style="color: var(--color-text-secondary); margin-top: var(--spacing-sm);">
+                    Введите URL для анализа безопасности веб-приложения
+                </p>
+            </div>
+        </div>
+        <div style="margin-bottom: -15px;"></div>
+        <div class="card">
+            <div id="scanFormSection">
+                <form id="scanForm" class="scan-form">
+                    <div class="form-group">
+                        <label for="targetUrl" class="form-label">
+                            <i class="fas fa-link"></i> URL для сканирования
+                        </label>
+                        <input 
+                            type="url" 
+                            id="targetUrl" 
+                            class="form-input" 
+                            placeholder="Введите ссылку для сканирования (например, https://example.com)" 
+                            required
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="projectSelect" class="form-label">
+                            <i class="fas fa-folder"></i> Добавить в проект (опционально)
+                        </label>
+                        <div class="custom-select-wrapper">
+                            <select id="projectSelect" class="custom-select">
+                                <option value="">-- Выберите проект --</option>
+                            </select>
+                            <div class="custom-select-arrow">
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <button type="button" id="startScanBtn" class="btn btn-primary" style="width: 100%; padding: 20px; font-size: 1.2rem;">
+                            <i class="fas fa-play"></i>
+                            Начать сканирование
+                        </button>
+                    </div>
+                </form>
+            </div>
+            
+            <div id="scanningSection" class="hidden scanning-section">
+                <div class="pulsing-sphere" id="scanSphere"></div>
+                <h3 style="color: var(--color-accent); margin-bottom: var(--spacing-sm);">
+                    Сканирование выполняется...
+                </h3>
+                <p id="scanStatus" style="color: var(--color-text-secondary); margin-bottom: var(--spacing-lg);">
+                    Подготовка к сканированию
+                </p>
+                <button id="stopScanBtn" class="btn btn-danger">
+                    <i class="fas fa-stop"></i>
+                    Остановить сканирование
+                </button>
+            </div>
+            
+            <div id="cancelledSection" class="hidden cancelled-section">
+                <div class="pulsing-sphere stopped" id="cancelledSphere"></div>
+                <h3 style="color: var(--color-warning); margin-bottom: var(--spacing-sm);">
+                    <i class="fas fa-exclamation-triangle"></i> Сканирование отменено
+                </h3>
+                <p style="color: var(--color-text-secondary); margin-bottom: var(--spacing-xl);">
+                    Сканирование было прервано пользователем
+                </p>
+                <button id="newScanBtn" class="btn btn-primary new-scan-btn">
+                    <i class="fas fa-redo"></i>
+                    Новое сканирование
+                </button>
+            </div>
+            
+            <div id="reportSection" class="hidden">
+                <div style="text-align: center; padding: var(--spacing-xl) 0;">
+                    <h3 style="color: var(--color-success); margin-bottom: var(--spacing-sm);">
+                        <i class="fas fa-check-circle"></i> Сканирование завершено!
+                    </h3>
+                    <p style="color: var(--color-text-secondary); margin-bottom: var(--spacing-xl);">
+                        Скачайте отчеты в нужном формате:
+                    </p>
+                    
+                    <div class="report-buttons" style="display: flex; gap: var(--spacing-md); justify-content: center; flex-wrap: wrap;">
+                        <button class="btn btn-success report-download-btn" data-format="json">
+                            <i class="fas fa-file-code"></i>
+                            Сохранить JSON
+                        </button>
+                        <button class="btn btn-danger report-download-btn" data-format="pdf">
+                            <i class="fas fa-file-pdf"></i>
+                            Сохранить PDF
+                        </button>
+                        <button class="btn btn-primary report-download-btn" data-format="html">
+                            <i class="fas fa-file-alt"></i>
+                            Сохранить HTML
+                        </button>
+                    </div>
+                    
+                    <div style="margin-top: var(--spacing-xl);">
+                        <button id="newScanAfterReportBtn" class="btn btn-secondary">
+                            <i class="fas fa-redo"></i>
+                            Новое сканирование
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="errorSection" class="hidden">
+                <div style="text-align: center; padding: var(--spacing-xl);">
+                    <div style="font-size: 3rem; color: var(--color-error); margin-bottom: var(--spacing-md);">
+                        <i class="fas fa-exclamation-circle"></i>
+                    </div>
+                    <h3 style="color: var(--color-error); margin-bottom: var(--spacing-sm);">
+                        Ошибка сканирования
+                    </h3>
+                    <p id="errorMessage" style="color: var(--color-text-secondary); margin-bottom: var(--spacing-xl);">
+                        Произошла ошибка при выполнении сканирования
+                    </p>
+                    <button id="newScanAfterErrorBtn" class="btn btn-primary">
+                        <i class="fas fa-redo"></i>
+                        Попробовать снова
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <script src="/static/js/main.js"></script>
+    <script>
+        let currentScanId = null;
+        let statusInterval = null;
+        let isScanning = false;
+        let scanStoppedByUser = false;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const username = getCookie('username');
+            if (username) {
+                document.getElementById('username').textContent = username;
+                const userAvatar = document.getElementById('userAvatar');
+                userAvatar.textContent = username.charAt(0).toUpperCase();
+            }
+            
+            loadProjects();
+            
+            document.getElementById('startScanBtn').addEventListener('click', startScan);
+            document.getElementById('stopScanBtn').addEventListener('click', stopScan);
+            document.getElementById('newScanBtn').addEventListener('click', resetToNewScan);
+            document.getElementById('newScanAfterReportBtn').addEventListener('click', resetToNewScan);
+            document.getElementById('newScanAfterErrorBtn').addEventListener('click', resetToNewScan);
+            
+            document.querySelectorAll('.report-download-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    if (!currentScanId) return;
+                    const format = this.getAttribute('data-format');
+                    window.open(`/api/report/${currentScanId}/${format}`, '_blank');
+                });
+            });
+        });
+        
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+        
+        async function loadProjects() {
+            try {
+                const response = await fetch('/api/projects');
+                const projects = await response.json();
+                const select = document.getElementById('projectSelect');
+                
+                while (select.options.length > 1) {
+                    select.remove(1);
+                }
+                
+                projects.forEach(project => {
+                    const option = document.createElement('option');
+                    option.value = project.id;
+                    option.textContent = project.name;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading projects:', error);
+            }
+        }
+        
+        async function startScan() {
+            const targetUrl = document.getElementById('targetUrl').value.trim();
+            const projectId = document.getElementById('projectSelect').value;
+            
+            if (!targetUrl) {
+                alert('Пожалуйста, введите URL для сканирования');
+                return;
+            }
+            
+            try {
+                new URL(targetUrl);
+            } catch (e) {
+                alert('Пожалуйста, введите корректный URL (начинающийся с http:// или https://)');
+                return;
+            }
+            
+            isScanning = true;
+            scanStoppedByUser = false;
+            
+            try {
+                showSection('scanningSection');
+                document.getElementById('scanStatus').textContent = 'Запуск сканирования...';
+                
+                const response = await fetch('/api/scan/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        target_url: targetUrl,
+                        project_id: projectId || null
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    currentScanId = result.scan_id;
+                    startStatusPolling();
+                } else {
+                    showError(result.error || 'Неизвестная ошибка при запуске сканирования');
+                    resetScanState();
+                }
+            } catch (error) {
+                showError('Ошибка при запуске сканирования: ' + error.message);
+                resetScanState();
+            }
+        }
+        
+        async function stopScan() {
+            if (!currentScanId || !isScanning) return;
+            
+            scanStoppedByUser = true;
+            
+            try {
+                const stopBtn = document.getElementById('stopScanBtn');
+                const originalText = stopBtn.innerHTML;
+                stopBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Останавливается...';
+                stopBtn.disabled = false; 
+                
+                await fetch(`/api/scan/stop/${currentScanId}`, {
+                    method: 'POST'
+                });
+                
+                stopBtn.innerHTML = originalText;
+                
+                stopStatusPolling();
+                
+                document.getElementById('scanSphere').classList.add('stopped');
+                
+                document.getElementById('scanStatus').textContent = 'Отмена сканирования...';
+                document.getElementById('scanStatus').style.color = 'var(--color-warning)';
+                
+                setTimeout(() => {
+                    showSection('cancelledSection');
+                    markScanAsCancelled();
+                }, 2000);
+                
+            } catch (error) {
+                console.error('Error stopping scan:', error);
+                stopStatusPolling();
+                document.getElementById('scanSphere').classList.add('stopped');
+                document.getElementById('scanStatus').textContent = 'Сканирование отменено';
+                document.getElementById('scanStatus').style.color = 'var(--color-warning)';
+                
+                setTimeout(() => {
+                    showSection('cancelledSection');
+                    markScanAsCancelled();
+                }, 2000);
+            }
+        }
+        
+        async function markScanAsCancelled() {
+            try {
+                await fetch(`/api/scans/${currentScanId}/status`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        status: 'Canceled'
+                    })
+                });
+            } catch (error) {
+                console.error('Error marking scan as cancelled:', error);
+            }
+        }
+        
+        function startStatusPolling() {
+            statusInterval = setInterval(async () => {
+                if (!currentScanId || !isScanning) {
+                    stopStatusPolling();
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(`/api/scan/status/${currentScanId}`);
+                    const status = await response.json();
+                    
+                    document.getElementById('scanStatus').textContent = `Статус: ${getStatusText(status.status)}`;
+                    
+                    if (scanStoppedByUser) return;
+                    
+                    if (status.status === 'Completed') {
+                        stopStatusPolling();
+                        isScanning = false;
+                        showSection('reportSection');
+                    } else if (status.status === 'Failed') {
+                        stopStatusPolling();
+                        isScanning = false;
+                        showError('Сканирование завершилось с ошибкой');
+                    } else if (status.status === 'Canceled') {
+                        stopStatusPolling();
+                        isScanning = false;
+                        if (!scanStoppedByUser) {
+                            document.getElementById('scanSphere').classList.add('stopped');
+                            setTimeout(() => {
+                                showSection('cancelledSection');
+                            }, 1000);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error checking scan status:', error);
+                }
+            }, 2000);
+        }
+        
+        function stopStatusPolling() {
+            if (statusInterval) {
+                clearInterval(statusInterval);
+                statusInterval = null;
+            }
+        }
+        
+        function showSection(sectionId) {
+            const sections = [
+                'scanFormSection',
+                'scanningSection', 
+                'cancelledSection',
+                'reportSection',
+                'errorSection'
+            ];
+            
+            sections.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.classList.add('hidden');
+                    element.classList.remove('visible');
+                }
+            });
+            
+            const targetSection = document.getElementById(sectionId);
+            if (targetSection) {
+                targetSection.classList.remove('hidden');
+                targetSection.classList.add('visible');
+            }
+        }
+        
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+            showSection('errorSection');
+            resetScanState();
+        }
+        
+        function resetScanState() {
+            isScanning = false;
+            scanStoppedByUser = false;
+            stopStatusPolling();
+        }
+        
+        function resetToNewScan() {
+            document.getElementById('targetUrl').value = '';
+            document.getElementById('projectSelect').selectedIndex = 0;
+            
+            currentScanId = null;
+            resetScanState();
+            
+            document.getElementById('scanSphere').classList.remove('stopped');
+            document.getElementById('cancelledSphere').classList.remove('stopped');
+            
+            document.getElementById('scanStatus').textContent = 'Подготовка к сканированию';
+            document.getElementById('scanStatus').style.color = 'var(--color-text-secondary)';
+            
+            showSection('scanFormSection');
+        }
+        
+        function getStatusText(status) {
+            const statusMap = {
+                'Queued': 'В очереди',
+                'In Progress': 'Выполняется',
+                'Completed': 'Завершено',
+                'Failed': 'Ошибка',
+                'Canceled': 'Отменено'
+            };
+            return statusMap[status] || status;
+        }
+    </script>
+</body>
+</html>

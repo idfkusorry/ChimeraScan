@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Проект - ChimeraScan</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div id="ascii-matrix"></div>
+    
+    <header class="app-header">
+        <a href="/projects" class="back-btn">
+            <i class="fas fa-arrow-left"></i>
+            Назад к проектам
+        </a>
+        
+        <div class="user-info">
+            <div class="user-avatar" id="userAvatar"></div>
+            <span class="username" id="username"></span>
+            <a href="/logout" class="btn btn-icon btn-secondary" title="Выйти">
+                <i class="fas fa-sign-out-alt"></i>
+            </a>
+        </div>
+    </header>
+    
+    <main class="container">
+        <div class="card" style="margin-bottom: var(--spacing-lg); margin-top: var(--spacing-lg);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--spacing-md);">
+                <div style="flex-grow: 1;">
+                    <h1 id="projectName" style="color: var(--color-accent); margin-bottom: 8px;">Название проекта</h1>
+                    <p id="projectDescription" style="color: var(--color-text-secondary);">
+                        Описание проекта
+                    </p>
+                </div>
+                <button class="btn btn-secondary" onclick="openEditModal()">
+                    <i class="fas fa-edit"></i>
+                    Редактировать
+                </button>
+            </div>
+            
+            <div style="display: flex; gap: var(--spacing-md); flex-wrap: wrap; margin-top: var(--spacing-md);">
+                <div style="color: var(--color-text-secondary);">
+                    <i class="far fa-calendar"></i> Создан: <span id="projectCreatedAt">-</span>
+                </div>
+                <div style="color: var(--color-text-secondary);">
+                    <i class="fas fa-search"></i> Сканирований: <span id="projectScanCount">0</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="page-header" style="margin-bottom: var(--spacing-lg);">
+            <h2 style="color: var(--color-accent);">
+                <i class="fas fa-search"></i> Сканирования в проекте
+            </h2>
+        </div>
+        
+        <div class="card">
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Дата и время</th>
+                            <th>URL</th>
+                            <th>Статус</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="projectScansTable">
+                    </tbody>
+                </table>
+            </div>
+            
+            <div id="emptyScansState" class="empty-state" style="display: none;">
+                <div class="empty-state-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <h3 style="color: var(--color-text-muted); margin-bottom: var(--spacing-sm);">
+                    В этом проекте пока нет сканирований
+                </h3>
+                <p style="color: var(--color-text-muted);">
+                    Запустите сканирование и добавьте его в этот проект
+                </p>
+                <a href="/scan" class="btn btn-primary" style="margin-top: var(--spacing-md);">
+                    <i class="fas fa-play"></i>
+                    Запустить сканирование
+                </a>
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: var(--spacing-xl);">
+            <button class="btn btn-danger" onclick="deleteProject()">
+                <i class="fas fa-trash"></i>
+                Удалить проект
+            </button>
+            <p style="color: var(--color-text-muted); font-size: 0.9rem; margin-top: var(--spacing-sm);">
+                При удалении проекта сканирования останутся в общем архиве
+            </p>
+        </div>
+    </main>
+    
+    <div id="editProjectModal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2 style="color: var(--color-accent);">
+                    <i class="fas fa-edit"></i> Редактировать проект
+                </h2>
+                <button class="modal-close" onclick="closeEditModal()">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <form id="editProjectForm">
+                    <div class="form-group">
+                        <label for="editProjectName" class="form-label">Название проекта *</label>
+                        <input 
+                            type="text" 
+                            id="editProjectName" 
+                            class="form-input" 
+                            placeholder="Введите название проекта" 
+                            required
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editProjectDescription" class="form-label">Описание</label>
+                        <textarea 
+                            id="editProjectDescription" 
+                            class="form-input form-textarea" 
+                            placeholder="Опишите цель проекта..."
+                        ></textarea>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeEditModal()">
+                    Отмена
+                </button>
+                <button class="btn btn-primary" onclick="saveProject()">
+                    Сохранить изменения
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/js/main.js"></script>
+    <script>
+        let currentProjectId = null;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const username = getCookie('username');
+            if (username) {
+                document.getElementById('username').textContent = username;
+                const userAvatar = document.getElementById('userAvatar');
+                userAvatar.textContent = username.charAt(0).toUpperCase();
+                userAvatar.style.cssText = `
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 50%;
+                    background-color: var(--color-accent);
+                    color: white;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: bold;
+                    margin-right: 10px;
+                `;
+            }
+            
+            const pathParts = window.location.pathname.split('/');
+            currentProjectId = pathParts[pathParts.length - 1];
+            
+            loadProjectData();
+            loadProjectScans();
+            
+            initModal();
+        });
+        
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+        
+        async function loadProjectData() {
+            try {
+                const response = await fetch(`/api/projects/${currentProjectId}`);
+                
+                if (response.status === 404) {
+                    await loadProjectDataFallback();
+                    return;
+                }
+                
+                const project = await response.json();
+                
+                if (project) {
+                    updateProjectUI(project);
+                    
+                    document.getElementById('editProjectName').value = project.name;
+                    document.getElementById('editProjectDescription').value = project.description || '';
+                }
+            } catch (error) {
+                console.error('Error loading project data:', error);
+                await loadProjectDataFallback();
+            }
+        }
+        
+        async function loadProjectDataFallback() {
+            try {
+                const response = await fetch('/api/projects');
+                const projects = await response.json();
+                const project = projects.find(p => p.id === currentProjectId);
+                
+                if (project) {
+                    updateProjectUI(project);
+                    
+                    document.getElementById('editProjectName').value = project.name;
+                    document.getElementById('editProjectDescription').value = project.description || '';
+                }
+            } catch (error) {
+                console.error('Error in fallback loading:', error);
+            }
+        }
+        
+        function updateProjectUI(project) {
+            document.getElementById('projectName').textContent = project.name;
+            document.getElementById('projectDescription').textContent = project.description || 'Описание отсутствует';
+            document.getElementById('projectCreatedAt').textContent = new Date(project.created_at).toLocaleDateString('ru-RU');
+            
+            if (project.scan_count !== undefined) {
+                document.getElementById('projectScanCount').textContent = project.scan_count;
+            } else if (project.scans) {
+                document.getElementById('projectScanCount').textContent = project.scans.length;
+            }
+        }
+        
+        async function loadProjectScans() {
+            try {
+                const response = await fetch(`/api/projects/${currentProjectId}/scans`);
+                
+                if (response.status === 404) {
+                    await loadProjectScansFallback();
+                    return;
+                }
+                
+                const scans = await response.json();
+                displayProjectScans(scans);
+                updateScanCount(scans.length);
+            } catch (error) {
+                console.error('Error loading project scans:', error);
+                await loadProjectScansFallback();
+            }
+        }
+        
+        async function loadProjectScansFallback() {
+            try {
+                const response = await fetch('/api/scans');
+                const allScans = await response.json();
+                const projectScans = allScans.filter(scan => scan.project_id === currentProjectId);
+                
+                displayProjectScans(projectScans);
+                updateScanCount(projectScans.length);
+            } catch (error) {
+                console.error('Error in fallback loading scans:', error);
+                showEmptyScansState();
+            }
+        }
+        
+        function updateScanCount(count) {
+            document.getElementById('projectScanCount').textContent = count;
+        }
+        
+        function displayProjectScans(scans) {
+            const tbody = document.getElementById('projectScansTable');
+            const emptyState = document.getElementById('emptyScansState');
+            
+            if (!scans || scans.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            tbody.innerHTML = '';
+            
+            scans.forEach(scan => {
+                const row = document.createElement('tr');
+                const date = new Date(scan.created_at).toLocaleString('ru-RU');
+                const statusClass = `status-${scan.status.toLowerCase().replace(' ', '-')}`;
+                
+                row.innerHTML = `
+                    <td>${date}</td>
+                    <td title="${scan.target_url}">${truncateUrl(scan.target_url)}</td>
+                    <td>
+                        <span class="status-badge ${statusClass}">
+                            ${getStatusText(scan.status)}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            ${scan.status === 'Completed' ? `
+                                <button class="action-btn action-btn-report" title="Скачать JSON" onclick="downloadReport('${scan.id}', 'json')">
+                                    <i class="fas fa-file-code"></i>
+                                </button>
+                                <button class="action-btn action-btn-report" title="Скачать PDF" onclick="downloadReport('${scan.id}', 'pdf')">
+                                    <i class="fas fa-file-pdf"></i>
+                                </button>
+                                <button class="action-btn action-btn-report" title="Скачать HTML" onclick="downloadReport('${scan.id}', 'html')">
+                                    <i class="fas fa-file-alt"></i>
+                                </button>
+                            ` : ''}
+                            <button class="action-btn action-btn-delete" title="Убрать из проекта" onclick="removeScanFromProject('${scan.id}')">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+        
+        function truncateUrl(url, maxLength = 40) {
+            if (url.length <= maxLength) return url;
+            return url.substring(0, maxLength) + '...';
+        }
+        
+        function getStatusText(status) {
+            const statusMap = {
+                'Queued': 'В очереди',
+                'In Progress': 'Выполняется',
+                'Completed': 'Завершено',
+                'Failed': 'Ошибка',
+                'Canceled': 'Отменено'
+            };
+            return statusMap[status] || status;
+        }
+        
+        function initModal() {
+            const modal = document.getElementById('editProjectModal');
+            const closeBtn = modal.querySelector('.modal-close');
+            
+            modal.addEventListener('click', function(event) {
+                if (event.target === modal) {
+                    closeEditModal();
+                }
+            });
+            
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape' && modal.classList.contains('active')) {
+                    closeEditModal();
+                }
+            });
+        }
+        
+        function openEditModal() {
+            const modal = document.getElementById('editProjectModal');
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function closeEditModal() {
+            const modal = document.getElementById('editProjectModal');
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+        
+        async function saveProject() {
+            const name = document.getElementById('editProjectName').value.trim();
+            const description = document.getElementById('editProjectDescription').value.trim();
+            
+            if (!name) {
+                alert('Пожалуйста, введите название проекта');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/projects/${currentProjectId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        description: description
+                    })
+                });
+                
+                if (response.ok) {
+                    closeEditModal();
+                    loadProjectData();  
+                    
+                    showNotification('Проект успешно обновлен', 'success');
+                } else {
+                    const error = await response.json();
+                    alert('Ошибка: ' + error.error);
+                }
+            } catch (error) {
+                alert('Ошибка при сохранении проекта: ' + error.message);
+            }
+        }
+        
+        async function deleteProject() {
+            if (!confirm('Вы уверены, что хотите удалить этот проект? Сканирования останутся в общем архиве.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/projects/${currentProjectId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    window.location.href = '/projects';
+                } else {
+                    alert('Ошибка при удалении проекта');
+                }
+            } catch (error) {
+                alert('Ошибка при удалении проекта: ' + error.message);
+            }
+        }
+        
+        async function removeScanFromProject(scanId) {
+            if (!confirm('Убрать сканирование из проекта?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/scans/${scanId}/add-to-project`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        project_id: null
+                    })
+                });
+                
+                if (response.ok) {
+                    loadProjectScans(); 
+                    showNotification('Сканирование убрано из проекта', 'info');
+                } else {
+                    alert('Ошибка при удалении сканирования из проекта');
+                }
+            } catch (error) {
+                alert('Ошибка при удалении сканирования из проекта: ' + error.message);
+            }
+        }
+        
+        function downloadReport(scanId, format) {
+            window.open(`/api/report/${scanId}/${format}`, '_blank');
+        }
+        
+        function showEmptyScansState() {
+            const tbody = document.getElementById('projectScansTable');
+            const emptyState = document.getElementById('emptyScansState');
+            
+            tbody.innerHTML = '';
+            emptyState.style.display = 'block';
+        }
+        
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? 'var(--color-success)' : 
+                           type === 'error' ? 'var(--color-error)' : 
+                           'var(--color-info)'};
+                color: ${type === 'success' ? 'black' : 'white'};
+                padding: 12px 20px;
+                border-radius: var(--border-radius-md);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                z-index: 10000;
+                animation: slideIn 0.3s ease;
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+        
+    </script>
+    
+    <style>
+        .table-responsive {
+            overflow-x: auto;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--color-accent);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+    </style>
+</body>
+</html>

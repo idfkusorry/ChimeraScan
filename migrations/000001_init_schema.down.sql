@@ -1,0 +1,6 @@
+DROP TABLE IF EXISTS scans;
+DROP TABLE IF EXISTS projects;
+DROP TABLE IF EXISTS users;
+DROP TYPE IF EXISTS scan_status;
+DROP TYPE IF EXISTS severity_level;
+DROP TABLE IF EXISTS vulnerabilities;

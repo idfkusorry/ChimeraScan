@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Архив сканирований - ChimeraScan</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .custom-select-wrapper {
+            position: relative;
+            width: 100%;
+        }
+        
+        .custom-select {
+            width: 100%;
+            padding: 14px 45px 14px 18px;
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 2px solid rgba(124, 77, 255, 0.3);
+            border-radius: var(--border-radius-md);
+            color: var(--color-text-primary) !important;
+            font-family: inherit;
+            font-size: 1rem;
+            transition: all var(--transition-normal);
+            appearance: none;
+            cursor: pointer;
+            outline: none;
+        }
+        
+        .custom-select:hover {
+            border-color: rgba(124, 77, 255, 0.5);
+            background: rgba(255, 255, 255, 0.07) !important;
+        }
+        
+        .custom-select:focus {
+            border-color: var(--color-accent);
+            box-shadow: 0 0 0 3px rgba(124, 77, 255, 0.3);
+            background: rgba(255, 255, 255, 0.08) !important;
+        }
+        
+        .custom-select-arrow {
+            position: absolute;
+            right: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            color: var(--color-accent);
+            font-size: 0.9rem;
+        }
+        
+        .custom-select option {
+            background-color: rgba(30, 30, 50, 0.95) !important;
+            color: var(--color-text-primary) !important;
+            padding: 12px !important;
+            border: none !important;
+        }
+        
+        .custom-select option:hover {
+            background-color: rgba(124, 77, 255, 0.2) !important;
+        }
+        
+        .custom-select option:checked {
+            background-color: rgba(124, 77, 255, 0.3) !important;
+            color: white !important;
+            font-weight: 600;
+        }
+        
+        .custom-select {
+            text-shadow: 0 0 0 var(--color-text-primary);
+        }
+        
+        .custom-select::-ms-expand {
+            display: none;
+        }
+        
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+        
+        .modal-container {
+            background: rgba(30, 30, 50, 0.95);
+            border-radius: var(--border-radius-lg);
+            width: 90%;
+            max-width: 500px;
+            border: 1px solid var(--color-accent);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            transform: translateY(20px);
+            transition: transform 0.3s ease;
+        }
+        
+        .modal-overlay.active .modal-container {
+            transform: translateY(0);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--color-text-muted);
+            font-size: 1.8rem;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all var(--transition-fast);
+        }
+        
+        .modal-close:hover {
+            color: var(--color-error);
+            background: rgba(255, 82, 82, 0.1);
+        }
+        
+        .modal-body {
+            padding: var(--spacing-lg);
+        }
+        
+        .modal-footer {
+            padding: var(--spacing-lg);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--spacing-sm);
+        }
+        
+        .table-responsive {
+            overflow-x: auto;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .status-queued { background: rgba(136, 136, 136, 0.2); color: #888; }
+        .status-in-progress { background: rgba(255, 170, 0, 0.2); color: #ffaa00; }
+        .status-completed { background: rgba(0, 230, 118, 0.2); color: #00e676; }
+        .status-failed { background: rgba(255, 82, 82, 0.2); color: #ff5252; }
+        .status-canceled { background: rgba(136, 136, 136, 0.2); color: #aaa; }
+        
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .action-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--color-text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: scale(1.1);
+        }
+        
+        .action-btn-report { color: var(--color-info); border-color: rgba(0, 176, 255, 0.3); }
+        .action-btn-report:hover { background: rgba(0, 176, 255, 0.2); box-shadow: 0 0 12px rgba(0, 176, 255, 0.4); }
+        
+        .action-btn-add { color: var(--color-success); border-color: rgba(0, 230, 118, 0.3); }
+        .action-btn-add:hover { background: rgba(0, 230, 118, 0.2); box-shadow: 0 0 12px rgba(0, 230, 118, 0.4); }
+        
+        .action-btn-delete { color: var(--color-error); border-color: rgba(255, 82, 82, 0.3); }
+        .action-btn-delete:hover { background: rgba(255, 82, 82, 0.2); box-shadow: 0 0 12px rgba(255, 82, 82, 0.4); }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-xl);
+            color: var(--color-text-muted);
+        }
+        
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: var(--spacing-md);
+            opacity: 0.5;
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--color-accent);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="ascii-matrix"></div>
+    
+    <header class="app-header">
+        <a href="/dashboard" class="back-btn">
+            <i class="fas fa-arrow-left"></i>
+            Назад
+        </a>
+        
+        <div class="user-info">
+            <div class="user-avatar" id="userAvatar"></div>
+            <span class="username" id="username"></span>
+            <a href="/logout" class="btn btn-icon btn-secondary" title="Выйти">
+                <i class="fas fa-sign-out-alt"></i>
+            </a>
+        </div>
+    </header>
+    
+    <main class="container">
+        <div class="page-header">
+            <div class="page-title">
+                <h1 style="color: var(--color-accent); margin-top: var(--spacing-md);">
+                    Архив сканирований</h1>
+                <p style="color: var(--color-text-secondary); margin-top: var(--spacing-sm);">
+                    Просматривайте историю всех сканирований и управляйте отчетами
+                </p>
+            </div>
+            
+            <a href="/scan" class="btn btn-primary">
+                <i class="fas fa-play"></i>
+                Новое сканирование
+            </a>
+        </div>
+        
+        <div class="card">
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Дата и время</th>
+                            <th>URL</th>
+                            <th>Статус</th>
+                            <th>Проект</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scansTableBody">
+                    </tbody>
+                </table>
+            </div>
+            
+            <div id="emptyScansState" class="empty-state" style="display: none;">
+                <div class="empty-state-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <h3 style="color: var(--color-text-muted); margin-bottom: var(--spacing-sm);">
+                    Сканирования не найдены
+                </h3>
+                <p style="color: var(--color-text-muted); margin-bottom: var(--spacing-md);">
+                    Запустите ваше первое сканирование
+                </p>
+                <a href="/scan" class="btn btn-primary">
+                    <i class="fas fa-play"></i>
+                    Запустить сканирование
+                </a>
+            </div>
+        </div>
+    </main>
+    
+    <div id="addToProjectModal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2 style="color: var(--color-accent);">
+                    <i class="fas fa-folder-plus"></i> Добавить в проект
+                </h2>
+                <button class="modal-close" onclick="closeAddToProjectModal()">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="projectSelectList" class="form-label">Выберите проект</label>
+                    <div class="custom-select-wrapper">
+                        <select id="projectSelectList" class="custom-select">
+                            <option value="">-- Без проекта --</option>
+                        </select>
+                        <div class="custom-select-arrow">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                </div>
+                <p style="color: var(--color-text-muted); font-size: 0.9rem; margin-top: var(--spacing-md);">
+                    Выберите проект для добавления сканирования или оставьте "Без проекта"
+                </p>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeAddToProjectModal()">
+                    Отмена
+                </button>
+                <button class="btn btn-primary" id="confirmAddToProjectBtn" onclick="confirmAddToProject()">
+                    Добавить
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/js/main.js"></script>
+    <script>
+        let currentScanIdForModal = null;
+        let allProjects = [];
+        let allScans = [];
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const username = getCookie('username');
+            if (username) {
+                document.getElementById('username').textContent = username;
+                const userAvatar = document.getElementById('userAvatar');
+                userAvatar.textContent = username.charAt(0).toUpperCase();
+            }
+            
+            Promise.all([
+                loadProjects(),
+                loadScans()
+            ]).then(() => {
+                console.log('Все данные загружены');
+            }).catch(error => {
+                console.error('Ошибка при загрузке данных:', error);
+            });
+            
+            document.getElementById('addToProjectModal').addEventListener('click', function(event) {
+                if (event.target === this) {
+                    closeAddToProjectModal();
+                }
+            });
+            
+            document.addEventListener('keydown', function(event) {
+                const modal = document.getElementById('addToProjectModal');
+                if (event.key === 'Escape' && modal.classList.contains('active')) {
+                    closeAddToProjectModal();
+                }
+            });
+        });
+        
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+        
+        async function loadProjects() {
+            try {
+                console.log('Загрузка проектов...');
+                const response = await fetch('/api/projects');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                allProjects = await response.json();
+                console.log('Проекты загружены:', allProjects.length);
+            } catch (error) {
+                console.error('Error loading projects:', error);
+                allProjects = [];
+                showNotification('Ошибка при загрузке проектов', 'error');
+            }
+        }
+        
+        function getProjectName(projectId) {
+            if (!projectId) return '-';
+            const project = allProjects.find(p => p.id === projectId);
+            return project ? project.name : 'Неизвестный проект';
+        }
+        
+        async function loadScans() {
+            try {
+                console.log('Загрузка сканирований...');
+                const response = await fetch('/api/scans');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                allScans = await response.json();
+                console.log('Сканирования загружены:', allScans.length);
+                displayScans(allScans);
+            } catch (error) {
+                console.error('Error loading scans:', error);
+                showEmptyState();
+                showNotification('Ошибка при загрузке сканирований', 'error');
+            }
+        }
+        
+        function displayScans(scans) {
+            const tbody = document.getElementById('scansTableBody');
+            const emptyState = document.getElementById('emptyScansState');
+            
+            if (!scans || scans.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            tbody.innerHTML = '';
+            
+            scans.forEach(scan => {
+                const row = document.createElement('tr');
+                const date = new Date(scan.created_at).toLocaleString('ru-RU');
+                const statusClass = `status-${scan.status.toLowerCase().replace(' ', '-')}`;
+                const projectName = scan.project_id ? getProjectName(scan.project_id) : '-';
+                
+                row.innerHTML = `
+                    <td>${date}</td>
+                    <td title="${scan.target_url}">${truncateUrl(scan.target_url)}</td>
+                    <td>
+                        <span class="status-badge ${statusClass}">
+                            ${getStatusText(scan.status)}
+                        </span>
+                    </td>
+                    <td>${projectName}</td>
+                    <td>
+                        <div class="action-buttons">
+                            ${scan.status === 'Completed' ? `
+                                <button class="action-btn action-btn-report" title="Скачать JSON" onclick="downloadReport('${scan.id}', 'json')">
+                                    <i class="fas fa-file-code"></i>
+                                </button>
+                                <button class="action-btn action-btn-report" title="Скачать PDF" onclick="downloadReport('${scan.id}', 'pdf')">
+                                    <i class="fas fa-file-pdf"></i>
+                                </button>
+                                <button class="action-btn action-btn-report" title="Скачать HTML" onclick="downloadReport('${scan.id}', 'html')">
+                                    <i class="fas fa-file-alt"></i>
+                                </button>
+                            ` : ''}
+                            <button class="action-btn action-btn-add" title="Добавить в проект" onclick="openAddToProjectModal('${scan.id}', '${scan.project_id || ''}')">
+                                <i class="fas fa-folder-plus"></i>
+                            </button>
+                            <button class="action-btn action-btn-delete" title="Удалить" onclick="deleteScan('${scan.id}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+        
+        function openAddToProjectModal(scanId, currentProjectId = '') {
+            console.log('Открытие модального окна для сканирования:', scanId, 'текущий проект:', currentProjectId);
+            
+            currentScanIdForModal = scanId;
+            
+            try {
+                const select = document.getElementById('projectSelectList');
+                select.innerHTML = '<option value="">-- Без проекта --</option>';
+                
+                allProjects.forEach(project => {
+                    const option = document.createElement('option');
+                    option.value = project.id;
+                    option.textContent = project.name;
+                    
+                    if (currentProjectId && project.id === currentProjectId) {
+                        option.selected = true;
+                    }
+                    
+                    select.appendChild(option);
+                });
+                
+                if (allProjects.length === 0) {
+                    const option = document.createElement('option');
+                    option.value = "";
+                    option.textContent = "Сначала создайте проект";
+                    option.disabled = true;
+                    select.innerHTML = '';
+                    select.appendChild(option);
+                    select.disabled = true;
+                    document.getElementById('confirmAddToProjectBtn').disabled = true;
+                    document.getElementById('confirmAddToProjectBtn').style.opacity = '0.5';
+                    document.getElementById('confirmAddToProjectBtn').style.cursor = 'not-allowed';
+                } else {
+                    select.disabled = false;
+                    document.getElementById('confirmAddToProjectBtn').disabled = false;
+                    document.getElementById('confirmAddToProjectBtn').style.opacity = '1';
+                    document.getElementById('confirmAddToProjectBtn').style.cursor = 'pointer';
+                }
+                
+                const modal = document.getElementById('addToProjectModal');
+                modal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+                
+                console.log('Модальное окно открыто');
+            } catch (error) {
+                console.error('Error opening modal:', error);
+                showNotification('Ошибка при открытии модального окна', 'error');
+            }
+        }
+        
+        function closeAddToProjectModal() {
+            const modal = document.getElementById('addToProjectModal');
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+            
+            document.getElementById('projectSelectList').selectedIndex = 0;
+        }
+        
+        async function confirmAddToProject() {
+            if (!currentScanIdForModal) {
+                showNotification('Ошибка: не выбрано сканирование', 'error');
+                return;
+            }
+            
+            const projectId = document.getElementById('projectSelectList').value || null;
+            const projectName = projectId ? 
+                allProjects.find(p => p.id === projectId)?.name : 
+                'без проекта';
+            
+            try {
+                console.log('Отправка запроса на добавление в проект:', {
+                    scanId: currentScanIdForModal,
+                    projectId: projectId
+                });
+                
+                const response = await fetch(`/api/scans/${currentScanIdForModal}/add-to-project`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        project_id: projectId
+                    })
+                });
+                
+                if (response.ok) {
+                    closeAddToProjectModal();
+                    
+                    showNotification(
+                        projectId ? 
+                        `Сканирование добавлено в проект "${projectName}"` : 
+                        'Сканирование убрано из проекта',
+                        'success'
+                    );
+                    
+                    const scanIndex = allScans.findIndex(s => s.id === currentScanIdForModal);
+                    if (scanIndex !== -1) {
+                        allScans[scanIndex].project_id = projectId;
+                    }
+                    
+                    displayScans(allScans);
+                } else {
+                    const error = await response.json();
+                    showNotification('Ошибка: ' + (error.error || 'Неизвестная ошибка'), 'error');
+                }
+            } catch (error) {
+                console.error('Error adding to project:', error);
+                showNotification('Ошибка при добавлении в проект: ' + error.message, 'error');
+            }
+        }
+        
+        async function deleteScan(scanId) {
+            if (!confirm('Вы уверены, что хотите удалить это сканирование?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/scans/${scanId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    allScans = allScans.filter(s => s.id !== scanId);
+                    
+                    showNotification('Сканирование удалено', 'success');
+                    
+                    displayScans(allScans);
+                } else {
+                    showNotification('Ошибка при удалении сканирования', 'error');
+                }
+            } catch (error) {
+                showNotification('Ошибка при удалении сканирования: ' + error.message, 'error');
+            }
+        }
+        
+        function downloadReport(scanId, format) {
+            window.open(`/api/report/${scanId}/${format}`, '_blank');
+        }
+        
+        function truncateUrl(url, maxLength = 40) {
+            if (url.length <= maxLength) return url;
+            return url.substring(0, maxLength) + '...';
+        }
+        
+        function getStatusText(status) {
+            const statusMap = {
+                'Queued': 'В очереди',
+                'In Progress': 'Выполняется',
+                'Completed': 'Завершено',
+                'Failed': 'Ошибка',
+                'Canceled': 'Отменено'
+            };
+            return statusMap[status] || status;
+        }
+        
+        function showEmptyState() {
+            const tbody = document.getElementById('scansTableBody');
+            const emptyState = document.getElementById('emptyScansState');
+            
+            tbody.innerHTML = '';
+            emptyState.style.display = 'block';
+        }
+        
+        function showNotification(message, type = 'info') {
+            document.querySelectorAll('.notification').forEach(n => n.remove());
+            
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            
+            const bgColor = type === 'success' ? 'var(--color-success)' : 
+                           type === 'error' ? 'var(--color-error)' : 
+                           'var(--color-info)';
+            const textColor = type === 'success' ? 'black' : 'white';
+            
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${bgColor};
+                color: ${textColor};
+                padding: 12px 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                z-index: 10000;
+                animation: slideIn 0.3s ease;
+                font-weight: 500;
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

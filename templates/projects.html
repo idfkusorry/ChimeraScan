@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Архив проектов - ChimeraScan</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--color-accent);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .scan-count {
+            color: var(--color-accent) !important;
+            font-weight: 600;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+        
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+        
+        .modal-container {
+            background: rgba(30, 30, 50, 0.95);
+            border-radius: var(--border-radius-lg);
+            width: 90%;
+            max-width: 500px;
+            border: 1px solid var(--color-accent);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            transform: translateY(20px);
+            transition: transform 0.3s ease;
+        }
+        
+        .modal-overlay.active .modal-container {
+            transform: translateY(0);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--color-text-muted);
+            font-size: 1.8rem;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all var(--transition-fast);
+        }
+        
+        .modal-close:hover {
+            color: var(--color-error);
+            background: rgba(255, 82, 82, 0.1);
+        }
+        
+        .modal-body {
+            padding: var(--spacing-lg);
+        }
+        
+        .modal-footer {
+            padding: var(--spacing-lg);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--spacing-sm);
+        }
+    </style>
+</head>
+<body>
+    <div id="ascii-matrix"></div>
+    
+    <header class="app-header">
+        <a href="/dashboard" class="back-btn">
+            <i class="fas fa-arrow-left"></i>
+            Назад
+        </a>
+        
+        <div class="user-info">
+            <div class="user-avatar" id="userAvatar"></div>
+            <span class="username" id="username"></span>
+            <a href="/logout" class="btn btn-icon btn-secondary" title="Выйти">
+                <i class="fas fa-sign-out-alt"></i>
+            </a>
+        </div>
+    </header>
+    
+    <main class="container">
+    <div class="page-header">
+        <div class="page-title">
+            <h1 style="color: var(--color-accent); margin-top: var(--spacing-md);">
+                Архив проектов
+            </h1>
+            <p style="color: var(--color-text-secondary); margin-top: var(--spacing-sm);">
+                Управляйте проектами и отслеживайте связанные сканирования
+            </p>
+        </div>
+            
+            <button class="btn btn-primary" onclick="openCreateProjectModal()">
+                <i class="fas fa-plus"></i>
+                Добавить проект
+            </button>
+        </div>
+        
+        <div class="search-box">
+            <div class="search-input-container">
+                <i class="fas fa-search search-icon"></i>
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    class="form-input" 
+                    placeholder="Поиск по названию проекта..."
+                >
+            </div>
+        </div>
+        
+        <div class="card-grid" id="projectsGrid">
+        </div>
+        
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <div class="empty-state-icon">
+                <i class="fas fa-folder-open"></i>
+            </div>
+            <h3 style="color: var(--color-text-muted); margin-bottom: var(--spacing-sm);">
+                Проекты не найдены
+            </h3>
+            <p style="color: var(--color-text-muted);">
+                Создайте свой первый проект, нажав кнопку "Добавить проект"
+            </p>
+        </div>
+    </main>
+    
+    <div id="createProjectModal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2 style="color: var(--color-accent);">
+                    <i class="fas fa-plus-circle"></i> Создать новый проект
+                </h2>
+                <button class="modal-close" onclick="closeCreateProjectModal()">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <form id="createProjectForm">
+                    <div class="form-group">
+                        <label for="modalProjectName" class="form-label">Название проекта *</label>
+                        <input 
+                            type="text" 
+                            id="modalProjectName" 
+                            class="form-input" 
+                            placeholder="Введите название проекта" 
+                            required
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="modalProjectDescription" class="form-label">Описание (необязательно)</label>
+                        <textarea 
+                            id="modalProjectDescription" 
+                            class="form-input form-textarea" 
+                            placeholder="Опишите цель проекта..."
+                        ></textarea>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeCreateProjectModal()">
+                    Отмена
+                </button>
+                <button class="btn btn-primary" onclick="createProject()">
+                    Создать проект
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/js/main.js"></script>
+    <script>
+        let allProjects = [];
+        let allScans = [];
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const username = getCookie('username');
+            if (username) {
+                document.getElementById('username').textContent = username;
+                const userAvatar = document.getElementById('userAvatar');
+                userAvatar.textContent = username.charAt(0).toUpperCase();
+            }
+            
+            Promise.all([
+                loadProjects(),
+                loadScans()
+            ]).then(() => {
+                console.log('Все данные загружены');
+                displayProjectsWithScanCount();
+            }).catch(error => {
+                console.error('Ошибка при загрузке данных:', error);
+                showEmptyState();
+            });
+            
+            setupSearch();
+            
+            initModal();
+        });
+        
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+        
+        async function loadProjects() {
+            try {
+                const response = await fetch('/api/projects');
+                allProjects = await response.json();
+                console.log('Проекты загружены:', allProjects.length);
+            } catch (error) {
+                console.error('Error loading projects:', error);
+                allProjects = [];
+                showNotification('Ошибка при загрузке проектов', 'error');
+            }
+        }
+        
+        async function loadScans() {
+            try {
+                const response = await fetch('/api/scans');
+                allScans = await response.json();
+                console.log('Сканирования загружены:', allScans.length);
+            } catch (error) {
+                console.error('Error loading scans:', error);
+                allScans = [];
+                showNotification('Ошибка при загрузке сканирований', 'error');
+            }
+        }
+        
+        function getScanCountForProject(projectId) {
+            if (!projectId) return 0;
+            return allScans.filter(scan => scan.project_id === projectId).length;
+        }
+        
+        function displayProjectsWithScanCount() {
+            const grid = document.getElementById('projectsGrid');
+            const emptyState = document.getElementById('emptyState');
+            
+            if (!allProjects || allProjects.length === 0) {
+                grid.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            grid.innerHTML = '';
+            
+            const sortedProjects = [...allProjects].sort((a, b) => 
+                new Date(b.created_at) - new Date(a.created_at)
+            );
+            
+            sortedProjects.forEach(project => {
+                const card = document.createElement('div');
+                card.className = 'card card-clickable';
+                card.onclick = () => window.location.href = `/project/${project.id}`;
+                
+                const date = new Date(project.created_at).toLocaleDateString('ru-RU');
+                const scanCount = getScanCountForProject(project.id);
+                
+                card.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--spacing-sm);">
+                        <h3 style="color: var(--color-accent);">${escapeHtml(project.name)}</h3>
+                        <span style="color: var(--color-text-muted); font-size: 0.9rem;">
+                            <i class="far fa-calendar"></i> ${date}
+                        </span>
+                    </div>
+                    <p style="color: var(--color-text-secondary); margin-bottom: var(--spacing-sm); min-height: 60px;">
+                        ${project.description || '<span style="color: var(--color-text-muted); font-style: italic;">Описание отсутствует</span>'}
+                    </p>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: var(--spacing-md);">
+                        <span class="scan-count" style="font-size: 0.9rem;">
+                            <i class="fas fa-search"></i> Сканирований: ${scanCount}
+                        </span>
+                        <span style="color: var(--color-accent);">
+                            <i class="fas fa-arrow-right"></i>
+                        </span>
+                    </div>
+                `;
+                
+                grid.appendChild(card);
+            });
+        }
+        
+        function setupSearch() {
+            const searchInput = document.getElementById('searchInput');
+            if (!searchInput) return;
+            
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                const cards = document.querySelectorAll('.card-clickable');
+                let visibleCount = 0;
+                
+                cards.forEach(card => {
+                    const projectName = card.querySelector('h3').textContent.toLowerCase();
+                    if (projectName.includes(searchTerm)) {
+                        card.style.display = 'block';
+                        visibleCount++;
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+                
+                const emptyState = document.getElementById('emptyState');
+                if (visibleCount === 0 && searchTerm) {
+                    emptyState.style.display = 'block';
+                    emptyState.querySelector('h3').textContent = 'Проекты не найдены';
+                    emptyState.querySelector('p').textContent = 'Попробуйте изменить поисковый запрос';
+                } else if (visibleCount === 0) {
+                    emptyState.style.display = 'block';
+                    emptyState.querySelector('h3').textContent = 'Проекты не найдены';
+                    emptyState.querySelector('p').textContent = 'Создайте свой первый проект, нажав кнопку "Добавить проект"';
+                } else {
+                    emptyState.style.display = 'none';
+                }
+            });
+        }
+        
+        function initModal() {
+            const modal = document.getElementById('createProjectModal');
+            const closeBtn = modal.querySelector('.modal-close');
+            
+            modal.addEventListener('click', function(event) {
+                if (event.target === modal) {
+                    closeCreateProjectModal();
+                }
+            });
+            
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape' && modal.classList.contains('active')) {
+                    closeCreateProjectModal();
+                }
+            });
+        }
+        
+        function openCreateProjectModal() {
+            const modal = document.getElementById('createProjectModal');
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function closeCreateProjectModal() {
+            const modal = document.getElementById('createProjectModal');
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+            
+            document.getElementById('modalProjectName').value = '';
+            document.getElementById('modalProjectDescription').value = '';
+        }
+        
+        async function createProject() {
+            const name = document.getElementById('modalProjectName').value.trim();
+            const description = document.getElementById('modalProjectDescription').value.trim();
+            
+            if (!name) {
+                alert('Пожалуйста, введите название проекта');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/projects', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        description: description
+                    })
+                });
+                
+                if (response.ok) {
+                    const newProject = await response.json();
+                    
+                    closeCreateProjectModal();
+                    
+                    allProjects.push(newProject);
+                    
+                    showNotification('Проект успешно создан', 'success');
+                    
+                    displayProjectsWithScanCount();
+                } else {
+                    const error = await response.json();
+                    alert('Ошибка: ' + (error.error || 'Неизвестная ошибка'));
+                }
+            } catch (error) {
+                alert('Ошибка при создании проекта: ' + error.message);
+            }
+        }
+        
+        function showEmptyState() {
+            const grid = document.getElementById('projectsGrid');
+            const emptyState = document.getElementById('emptyState');
+            
+            grid.innerHTML = '';
+            emptyState.style.display = 'block';
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function showNotification(message, type = 'info') {
+            document.querySelectorAll('.notification').forEach(n => n.remove());
+            
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            
+            const bgColor = type === 'success' ? 'var(--color-success)' : 
+                           type === 'error' ? 'var(--color-error)' : 
+                           'var(--color-info)';
+            const textColor = type === 'success' ? 'black' : 'white';
+            
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${bgColor};
+                color: ${textColor};
+                padding: 12px 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                z-index: 10000;
+                animation: slideIn 0.3s ease;
+                font-weight: 500;
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
